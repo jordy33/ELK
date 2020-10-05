@@ -149,7 +149,7 @@ sudo ufw allow 'Nginx Full'
 Installing and Configuring Logstash
 Although it’s possible for Beats to send data directly to the Elasticsearch database, we recommend using Logstash to process the data. This will allow you to collect data from different sources, transform it into a common format, and export it to another database.
 
-
+![title](logstash.png)
 ```
 
 ```
