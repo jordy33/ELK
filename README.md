@@ -225,3 +225,202 @@ output {
   }
 }
 ```
+
+If you want to add filters for other applications that use the Filebeat input, be sure to name the files so they’re sorted between the input and the output configuration, meaning that the file names should begin with a two-digit number between 02 and 30.
+
+Test your Logstash configuration with this command:
+```
+sudo -u logstash /usr/share/logstash/bin/logstash --path.settings /etc/logstash -t
+```
+
+If there are no syntax errors, your output will display Configuration OK after a few seconds. If you don’t see this in your output, check for any errors that appear in your output and update your configuration to correct them.
+
+If your configuration test is successful, start and enable Logstash to put the configuration changes into effect:
+```
+sudo systemctl start logstash
+sudo systemctl enable logstash
+```
+
+Installing and Configuring Filebeat
+ 
+The Elastic Stack uses several lightweight data shippers called Beats to collect data from various sources and transport them to Logstash or Elasticsearch. Here are the Beats that are currently available from Elastic:
+
+Filebeat: collects and ships log files.
+Metricbeat: collects metrics from your systems and services.
+Packetbeat: collects and analyzes network data.
+Winlogbeat: collects Windows event logs.
+Auditbeat: collects Linux audit framework data and monitors file integrity.
+Heartbeat: monitors services for their availability with active probing.
+In this tutorial we will use Filebeat to forward local logs to our Elastic Stack.
+
+Install Filebeat using apt:
+```
+sudo apt install filebeat
+```
+Next, configure Filebeat to connect to Logstash. Here, we will modify the example configuration file that comes with Filebeat.
+
+```
+Note: As with Elasticsearch, Filebeat’s configuration file is in YAML format. This means that proper indentation is crucial, so be sure to use the same number of spaces that are indicated in these instructions.
+```
+
+Open the Filebeat configuration file:
+```
+sudo vim /etc/filebeat/filebeat.yml
+```
+Filebeat supports numerous outputs, but you’ll usually only send events directly to Elasticsearch or to Logstash for additional processing. In this tutorial, we’ll use Logstash to perform additional processing on the data collected by Filebeat. Filebeat will not need to send any data directly to Elasticsearch, so let’s disable that output. To do so, find the output.elasticsearch section and comment out the following lines by preceding them with a #:
+
+```
+...
+#output.elasticsearch:
+  # Array of hosts to connect to.
+  #hosts: ["localhost:9200"]
+...
+```
+Save and close the file.
+
+The functionality of Filebeat can be extended with Filebeat modules. In this tutorial we will use the system module, which collects and parses logs created by the system logging service of common Linux distributions.
+
+Let’s enable it:
+```
+sudo filebeat modules enable system
+```
+You can see a list of enabled and disabled modules by running:
+```
+sudo filebeat modules list
+```
+You will see a list similar to the following:
+```
+Enabled:
+system
+
+Disabled:
+activemq
+apache
+auditd
+aws
+azure
+barracuda
+bluecoat
+cef
+checkpoint
+cisco
+coredns
+crowdstrike
+cylance
+elasticsearch
+envoyproxy
+f5
+fortinet
+googlecloud
+gsuite
+haproxy
+ibmmq
+icinga
+iis
+imperva
+infoblox
+iptables
+juniper
+kafka
+kibana
+logstash
+microsoft
+misp
+mongodb
+mssql
+mysql
+nats
+netflow
+netscout
+nginx
+o365
+okta
+osquery
+panw
+postgresql
+rabbitmq
+radware
+redis
+santa
+sonicwall
+sophos
+squid
+suricata
+tomcat
+traefik
+zeek
+zscaler
+```
+
+By default, Filebeat is configured to use default paths for the syslog and authorization logs. In the case of this tutorial, you do not need to change anything in the configuration. You can see the parameters of the module in the /etc/filebeat/modules.d/system.yml configuration file.
+
+Next, load the index template into Elasticsearch. An Elasticsearch index is a collection of documents that have similar characteristics. Indexes are identified with a name, which is used to refer to the index when performing various operations within it. The index template will be automatically applied when a new index is created.
+
+To load the template, use the following command:
+```
+sudo filebeat setup --template -E output.logstash.enabled=false -E 'output.elasticsearch.hosts=["localhost:9200"]'
+```
+Output
+Loaded index template
+Filebeat comes packaged with sample Kibana dashboards that allow you to visualize Filebeat data in Kibana. Before you can use the dashboards, you need to create the index pattern and load the dashboards into Kibana.
+
+As the dashboards load, Filebeat connects to Elasticsearch to check version information. To load dashboards when Logstash is enabled, you need to disable the Logstash output and enable Elasticsearch output:
+```
+sudo filebeat setup -e -E output.logstash.enabled=false -E output.elasticsearch.hosts=['localhost:9200'] -E setup.kibana.host=localhost:5601
+```
+You will see output that looks like this:
+```
+asticsearch.hosts=['localhost:9200'] -E setup.kibana.host=localhost:5601
+2020-10-05T21:39:04.499Z	INFO	instance/beat.go:640	Home path: [/usr/share/filebeat] Config path: [/etc/filebeat] Data path: [/var/lib/filebeat] Logs path: [/var/log/filebeat]
+2020-10-05T21:39:04.499Z	INFO	instance/beat.go:648	Beat ID: 64ad7b26-c9b2-4e29-9662-5fdf152adb9c
+2020-10-05T21:39:04.501Z	INFO	[beat]	instance/beat.go:976	Beat info	{"system_info": {"beat": {"path": {"config": "/etc/filebeat", "data": "/var/lib/filebeat", "home": "/usr/share/filebeat", "logs": "/var/log/filebeat"}, "type": "filebeat", "uuid": "64ad7b26-c9b2-4e29-9662-5fdf152adb9c"}}}
+2020-10-05T21:39:04.501Z	INFO	[beat]	instance/beat.go:985	Build info	{"system_info": {"build": {"commit": "2ab907f5ccecf9fd82fe37105082e89fd871f684", "libbeat": "7.9.2", "time": "2020-09-22T23:19:45.000Z", "version": "7.9.2"}}}
+2020-10-05T21:39:04.501Z	INFO	[beat]	instance/beat.go:988	Go runtime info	{"system_info": {"go": {"os":"linux","arch":"amd64","max_procs":2,"version":"go1.14.7"}}}
+2020-10-05T21:39:04.502Z	INFO	[beat]	instance/beat.go:992	Host info	{"system_info": {"host": {"architecture":"x86_64","boot_time":"2020-10-05T17:52:06Z","containerized":false,"name":"elk","ip":["127.0.0.1/8","::1/128","64.227.85.124/20","10.46.0.10/16","fe80::3003:a0ff:fe60:5402/64","10.138.0.2/16","fe80::18ca:e2ff:feab:4814/64"],"kernel_version":"4.15.0-115-generic","mac":["32:03:a0:60:54:02","1a:ca:e2:ab:48:14"],"os":{"family":"debian","platform":"ubuntu","name":"Ubuntu","version":"18.04.5 LTS (Bionic Beaver)","major":18,"minor":4,"patch":5,"codename":"bionic"},"timezone":"UTC","timezone_offset_sec":0,"id":"b807a2de11ba4b30be2582374a1e6745"}}}
+2020-10-05T21:39:04.502Z	INFO	[beat]	instance/beat.go:1021	Process info	{"system_info": {"process": {"capabilities": {"inheritable":null,"permitted":["chown","dac_override","dac_read_search","fowner","fsetid","kill","setgid","setuid","setpcap","linux_immutable","net_bind_service","net_broadcast","net_admin","net_raw","ipc_lock","ipc_owner","sys_module","sys_rawio","sys_chroot","sys_ptrace","sys_pacct","sys_admin","sys_boot","sys_nice","sys_resource","sys_time","sys_tty_config","mknod","lease","audit_write","audit_control","setfcap","mac_override","mac_admin","syslog","wake_alarm","block_suspend","audit_read"],"effective":["chown","dac_override","dac_read_search","fowner","fsetid","kill","setgid","setuid","setpcap","linux_immutable","net_bind_service","net_broadcast","net_admin","net_raw","ipc_lock","ipc_owner","sys_module","sys_rawio","sys_chroot","sys_ptrace","sys_pacct","sys_admin","sys_boot","sys_nice","sys_resource","sys_time","sys_tty_config","mknod","lease","audit_write","audit_control","setfcap","mac_override","mac_admin","syslog","wake_alarm","block_suspend","audit_read"],"bounding":["chown","dac_override","dac_read_search","fowner","fsetid","kill","setgid","setuid","setpcap","linux_immutable","net_bind_service","net_broadcast","net_admin","net_raw","ipc_lock","ipc_owner","sys_module","sys_rawio","sys_chroot","sys_ptrace","sys_pacct","sys_admin","sys_boot","sys_nice","sys_resource","sys_time","sys_tty_config","mknod","lease","audit_write","audit_control","setfcap","mac_override","mac_admin","syslog","wake_alarm","block_suspend","audit_read"],"ambient":null}, "cwd": "/home/wsgi", "exe": "/usr/share/filebeat/bin/filebeat", "name": "filebeat", "pid": 24246, "ppid": 24245, "seccomp": {"mode":"disabled","no_new_privs":false}, "start_time": "2020-10-05T21:39:04.240Z"}}}
+2020-10-05T21:39:04.502Z	INFO	instance/beat.go:299	Setup Beat: filebeat; Version: 7.9.2
+2020-10-05T21:39:04.502Z	INFO	[index-management]	idxmgmt/std.go:184	Set output.elasticsearch.index to 'filebeat-7.9.2' as ILM is enabled.
+2020-10-05T21:39:04.502Z	INFO	eslegclient/connection.go:99	elasticsearch url: http://localhost:9200
+2020-10-05T21:39:04.503Z	INFO	[publisher]	pipeline/module.go:113	Beat name: elk
+2020-10-05T21:39:04.504Z	INFO	eslegclient/connection.go:99	elasticsearch url: http://localhost:9200
+2020-10-05T21:39:04.510Z	INFO	[esclientleg]	eslegclient/connection.go:314	Attempting to connect to Elasticsearch version 7.9.2
+Overwriting ILM policy is disabled. Set `setup.ilm.overwrite: true` for enabling.
+
+2020-10-05T21:39:04.530Z	INFO	[index-management]	idxmgmt/std.go:261	Auto ILM enable success.
+2020-10-05T21:39:04.532Z	INFO	[index-management.ilm]	ilm/std.go:139	do not generate ilm policy: exists=true, overwrite=false
+2020-10-05T21:39:04.532Z	INFO	[index-management]	idxmgmt/std.go:274	ILM policy successfully loaded.
+2020-10-05T21:39:04.532Z	INFO	[index-management]	idxmgmt/std.go:407	Set setup.template.name to '{filebeat-7.9.2 {now/d}-000001}' as ILM is enabled.
+2020-10-05T21:39:04.532Z	INFO	[index-management]	idxmgmt/std.go:412	Set setup.template.pattern to 'filebeat-7.9.2-*' as ILM is enabled.
+2020-10-05T21:39:04.532Z	INFO	[index-management]	idxmgmt/std.go:446	Set settings.index.lifecycle.rollover_alias in template to {filebeat-7.9.2 {now/d}-000001} as ILM is enabled.
+2020-10-05T21:39:04.533Z	INFO	[index-management]	idxmgmt/std.go:450	Set settings.index.lifecycle.name in template to {filebeat {"policy":{"phases":{"hot":{"actions":{"rollover":{"max_age":"30d","max_size":"50gb"}}}}}}} as ILM is enabled.
+2020-10-05T21:39:04.534Z	INFO	template/load.go:169	Existing template will be overwritten, as overwrite is enabled.
+2020-10-05T21:39:04.539Z	INFO	[add_cloud_metadata]	add_cloud_metadata/add_cloud_metadata.go:93	add_cloud_metadata: hosting provider type detected as digitalocean, metadata={"instance":{"id":"210805493"},"provider":"digitalocean","region":"sfo2"}
+2020-10-05T21:39:05.784Z	INFO	template/load.go:109	Try loading template filebeat-7.9.2 to Elasticsearch
+2020-10-05T21:39:06.051Z	INFO	template/load.go:101	template with name 'filebeat-7.9.2' loaded.
+2020-10-05T21:39:06.051Z	INFO	[index-management]	idxmgmt/std.go:298	Loaded index template.
+2020-10-05T21:39:06.053Z	INFO	[index-management]	idxmgmt/std.go:309	Write alias successfully generated.
+Index setup finished.
+Loading dashboards (Kibana must be running and reachable)
+2020-10-05T21:39:06.054Z	INFO	kibana/client.go:119	Kibana url: http://localhost:5601
+2020-10-05T21:39:07.902Z	INFO	kibana/client.go:119	Kibana url: http://localhost:5601
+2020-10-05T21:40:15.551Z	INFO	instance/beat.go:810	Kibana dashboards successfully loaded.
+Loaded dashboards
+2020-10-05T21:40:15.551Z	WARN	[cfgwarn]	instance/beat.go:551	DEPRECATED: Setting up ML using Filebeat is going to be removed. Please use the ML app to setup jobs. Will be removed in version: 8.0.0
+Setting up ML using setup --machine-learning is going to be removed in 8.0.0. Please use the ML app instead.
+See more: https://www.elastic.co/guide/en/machine-learning/current/index.html
+2020-10-05T21:40:15.551Z	INFO	eslegclient/connection.go:99	elasticsearch url: http://localhost:9200
+2020-10-05T21:40:15.554Z	INFO	[esclientleg]	eslegclient/connection.go:314	Attempting to connect to Elasticsearch version 7.9.2
+2020-10-05T21:40:15.554Z	INFO	kibana/client.go:119	Kibana url: http://localhost:5601
+2020-10-05T21:40:15.603Z	WARN	fileset/modules.go:421	X-Pack Machine Learning is not enabled
+2020-10-05T21:40:15.639Z	WARN	fileset/modules.go:421	X-Pack Machine Learning is not enabled
+Loaded machine learning job configurations
+2020-10-05T21:40:15.639Z	INFO	eslegclient/connection.go:99	elasticsearch url: http://localhost:9200
+2020-10-05T21:40:15.650Z	INFO	[esclientleg]	eslegclient/connection.go:314	Attempting to connect to Elasticsearch version 7.9.2
+2020-10-05T21:40:15.651Z	INFO	eslegclient/connection.go:99	elasticsearch url: http://localhost:9200
+2020-10-05T21:40:15.654Z	INFO	[esclientleg]	eslegclient/connection.go:314	Attempting to connect to Elasticsearch version 7.9.2
+2020-10-05T21:40:16.376Z	INFO	fileset/pipelines.go:139	Elasticsearch pipeline with ID 'filebeat-7.9.2-system-auth-pipeline' loaded
+2020-10-05T21:40:16.488Z	INFO	fileset/pipelines.go:139	Elasticsearch pipeline with ID 'filebeat-7.9.2-system-syslog-pipeline' loaded
+2020-10-05T21:40:16.488Z	INFO	cfgfile/reload.go:262	Loading of config files completed.
+2020-10-05T21:40:16.488Z	INFO	[load]	cfgfile/list.go:124	Stopping 1 runners ...
+Loaded Ingest pipelines
+```
