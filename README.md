@@ -1,6 +1,6 @@
-# ELK
+# ELK installation Ubuntu
 
-### Elastic search installation Ubuntu
+### Elastic search installation 
 
 Java Installation
 ```
