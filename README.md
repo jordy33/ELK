@@ -124,3 +124,32 @@ listen [::]:80;
 
 }
 ```
+
+Create simbolic link to sites-enabled
+
+```
+sudo ln -s /etc/nginx/sites-available/sunserver.site /etc/nginx/sites-enabled/sunserver.site
+```
+
+Check errors
+```
+sudo nginx -t
+```
+
+Restart nginx 
+```
+sudo systemctl restart nginx
+```
+
+Enable firewall
+```
+sudo ufw allow 'Nginx Full'
+```
+
+Installing and Configuring Logstash
+Although it’s possible for Beats to send data directly to the Elasticsearch database, we recommend using Logstash to process the data. This will allow you to collect data from different sources, transform it into a common format, and export it to another database.
+
+
+```
+
+```
