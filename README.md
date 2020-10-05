@@ -170,7 +170,7 @@ Save and close the file. Next, create a configuration file called 10-syslog-filt
 sudo vim /etc/logstash/conf.d/10-syslog-filter.conf
 ```
 
-insert the following filter :
+insert the following filter :  This example system logs configuration was taken from official Elastic documentation. This filter is used to parse incoming system logs to make them structured and usable by the predefined Kibana dashboards:
 ```
 filter {
   if [fileset][module] == "system" {
@@ -206,6 +206,22 @@ filter {
         match => [ "[system][syslog][timestamp]", "MMM  d HH:mm:ss", "MMM dd HH:mm:ss" ]
       }
     }
+  }
+}
+```
+
+Lastly, create a configuration file called 30-elasticsearch-output.conf:
+```
+sudo vim /etc/logstash/conf.d/30-elasticsearch-output.conf
+```
+
+insert the following
+```
+output {
+  elasticsearch {
+    hosts => ["localhost:9200"]
+    manage_template => false
+    index => "%{[@metadata][beat]}-%{[@metadata][version]}-%{+YYYY.MM.dd}"
   }
 }
 ```
