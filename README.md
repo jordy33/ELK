@@ -45,3 +45,10 @@ Restart service
 ```
 sudo systemctl restart elasticsearch.service
 ```
+
+### Kibana installation
+```
+wget https://artifacts.elastic.co/downloads/kibana/kibana-7.9.2-amd64.deb
+wget https://artifacts.elastic.co/downloads/kibana/kibana-7.9.2-amd64.deb.sha512
+sudo dpkg -i kibana-7.9.2-amd64.deb
+```
