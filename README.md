@@ -66,10 +66,6 @@ sudo systemctl enable kibana
 sudo systemctl start kibana
 ```
 
-Create User password
-```
-echo "kibanaadmin:`openssl passwd -apr1`" | sudo tee -a /etc/nginx/htpasswd.users
-```
 
 Modify nginx configuration
 ```
@@ -468,28 +464,38 @@ The output
 }
 ```
 
-Creating admin Roles:
+### Enabling securitty in elastic search and kibana
+
+Enable Elastic search security
 ```
-curl -XPOST -u elastic 'localhost:9200/_security/role/events_admin' -H "Content-Type: application/json" -d '{
-   "indices" : [
-     {
-       "names" : [ "events*" ],
-       "privileges" : [ "all" ]
-     },
-     {
-       "names" : [ ".kibana*" ],
-       "privileges" : [ "manage", "read", "index" ]
-     }
-   ]
- }'
+sudo vim /etc/elasticsearch/elasticsearch.yml
 ```
 
-Create user:
+Insert:
 ```
-curl -XPOST -u elastic 'localhost:9200/_security/user/wsgi' -H "Content-Type: application/json" -d '{
-   "password" : "GPSc0ntr0l1",
-   "full_name" : "wsgi",
-   "email" : "jorge@dwim.mx",
-   "roles" : [ "events_admin" ]
- }'
+xpack.security.enabled: true
+```
+and Restart
+```
+sudo systemctl restart elasticsearch.service
+```
+
+Set the passwords for all built-in users:
+```
+cd /usr/share/elasticsearch/bin
+./elasticsearch-setup-passwords interactive
+```
+
+Enable Kibana security:
+```
+sudo vim /etc/kibana/kibana.yml
+```
+
+Insert at the end the following:
+```
+xpack.security.enabled: true
+elasticsearch.username: "kibana_system"
+elasticsearch.password: "GPSc0ntr0l1"
+xpack.security.encryptionKey: "bhj:)<]A(#4=G/x`vs{-*H#J>b5h;5nw"
+xpack.security.session.idleTimeout: "10m"
 ```
