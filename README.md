@@ -491,7 +491,7 @@ Insert at the end the following:
 ```
 xpack.security.enabled: true
 elasticsearch.username: "kibana_system"
-elasticsearch.password: "GPSc0ntr0l1"
+elasticsearch.password: "Set-the-password-from built-in-users"
 xpack.security.encryptionKey: "bhj:)<]A(#4=G/x`vs{-*H#J>b5h;5nw"
 xpack.security.session.idleTimeout: "10m"
 ```
